@@ -1,0 +1,144 @@
+. ~/.zsh/aliases
+
+####### General ###########
+
+# changing directory to code project
+function c { cd ~/code/$1; }
+
+alias reload='. ~/.bash_profile'
+
+# replace: find/replace strings across multiple files
+#     example: replace *.rb find_string replace_string
+function replace {
+  if [[ "$unamestr" == 'Darwin' ]]; then
+    find . -name "$1" -type f -print0 | xargs -0 sed -i '' -e "s/$2/$3/g"
+  else
+    find . -name "$1" -type f -print0 | xargs -0 sed -i -e "s/$2/$3/g"
+  fi
+}
+
+# ls
+alias ls='ls -G -F'
+alias l="ls -lAh"
+alias ll="ls -l"
+alias la='ls -A'
+
+function autoformatall {
+  autoformat "*.rb"
+  autoformat "*.erb"
+  autoformat "*.css"
+  autoformat "*.js"
+  autoformat "*.coffee"
+  autoformat "*.scss"
+  autoformat "*.sass"
+  autoformat "*.feature"
+}
+
+command_exists () {
+    type "$1" &> /dev/null ;
+}
+
+alias yumy='yum -y'
+alias yummy='yum -y'
+alias vi='vim'
+
+######### Rails ###########
+alias qspork='bundle exec spork cucumber'
+alias rspork='bundle exec spork'
+
+alias log='tail -f -n 800 log/development.log'
+alias qlog='tail -f -n 800 log/cucumber.log'
+alias tlog='tail -f -n 800 log/test.log'
+
+alias ts='tddium spec'
+
+alias sc='script/console'
+alias ss='script/server'
+alias sg='script/generate'
+alias scaffold='script/generate nifty_scaffold'
+
+alias rc='bundle exec rails console'
+alias rg='bundle exec rails generate'
+alias rs='bundle exec rails server'
+
+####### Cucumber ##########
+alias cuke='bundle exec cucumber -r features'
+alias icuke='CUCUMBER_INTERACTIVE=true bundle exec cucumber -r features'
+
+# slq (show last cukes): Show last 5 modified cukes
+alias slq='find . -type f -name "*.feature" -print | xargs ls -rlt | tail -5'
+
+# lq (last cuke): Run last modified cuke
+alias lq='find . -type f -name "*.feature" -print | xargs ls -rt | tail -1 | xargs bundle exec cucumber -r features'
+
+
+####### Linux-Mac Compatibility ###########
+platform='unknown'
+unamestr=`uname`
+if [[ "$unamestr" == 'Linux' ]]; then
+  alias pbcopy="xsel -b"
+
+  if [ -f /usr/local/bin/gvim ];
+  then
+    function gvim () { (/usr/local/bin/gvim -f "$@" &) }
+  else
+    function gvim () { (/usr/bin/gvim -f "$@" &) }
+  fi
+
+  alias mvim='gvim'
+  alias open='gnome-open'
+  alias ls='ls --color="auto" -F'
+fi
+
+
+################# Git ###############
+
+# Branch Clean: clears out all local git branches that have already been merged into the active branch
+brclean () { git branch -d $( git branch --merged | grep -v '^\*' | grep -v 'master' | grep -v 'staging' ); }
+
+# Remote Branch Clean: clears out all remote branches that have already been merged into master
+rbrclean () {
+  # Fetch remote branches and clear refs to deleted ones
+  git fetch --prune
+
+  # Update master
+  git checkout master && git pull origin master
+
+  if [ $? -eq 0 ]; then
+    echo "Checkout successful -- Updating/cleaning code"
+
+    branches_to_delete="$(git branch -r --merged | grep -v '^\*' | grep -v 'origin/master' | grep -v 'origin/staging' | grep 'origin/' | sed 's/origin\///g')"
+    if [[ "$branches_to_delete" == "" ]]; then
+      echo "No remote branches to delete"
+    else
+      echo $branches_to_delete | xargs git push --delete origin
+    fi
+  else
+    echo "Checkout unsuccessful -- Commit any working changes"
+  fi
+}
+
+function gbclean {
+  rbrclean
+  brclean
+}
+
+alias gbc='gbclean'
+
+function git-branch-authors {
+  git branch -r | grep -v 'HEAD' | while read branch
+  do
+    name="$(git log --pretty=tformat:%an -1 $branch)"
+    if [ $# -gt 0 ] && [ "$name" == "$1" ]
+    then
+      echo $branch : $name
+    fi
+
+    if [ $# -eq 0 ]
+    then
+      echo $branch : $name
+    fi
+  done
+}
+
+alias gba='git-branch-authors'
